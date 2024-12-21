@@ -9,6 +9,8 @@ readme = "README.md"
 python = "^3.12"
 requests = "^2.32.3"
 python-dotenv = "^1.0.1"
+pandas = "^2.2.3"
+openpyxl = "^3.1.5"
 
 
 [tool.poetry.group.lint.dependencies]
@@ -38,3 +40,6 @@ no_implicit_optional = true
 warn_return_any = true
 check_untyped_defs = true
 exclude = 'venv'
+
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report term-missing"
