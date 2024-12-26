@@ -94,6 +94,7 @@ def cashback():
         }
     ]
 
+
 @pytest.fixture
 def report():
     return [

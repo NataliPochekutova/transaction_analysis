@@ -1,8 +1,8 @@
 import pytest
 import json
-from datetime import datetime
 
 from src.services import cashback_categories
+
 
 def test_cashback_categories(cashback):
 

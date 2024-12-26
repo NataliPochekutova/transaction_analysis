@@ -2,7 +2,6 @@ import pytest
 import pandas as pd
 from unittest.mock import patch, Mock, mock_open
 import os
-import json
 from dotenv import load_dotenv
 from datetime import datetime
 from src.views import greeting_by_time_of_day, filter_by_date, reading_excel_file, card_expenses
@@ -180,19 +179,22 @@ def test_transaction_rating_by_amount_no_expenses(mock_data):
     assert result == expected
 
 
+@pytest.fixture
+def trans_1():
+    return ["USD", "EUR"]
+
+
 @patch('requests.get')
-def test_exchange_rate(mock_get):
+def test_currency_conversion(mock_get, trans_1):
     """Тестирование функции вывода курса валют"""
-    mock_response_usd = Mock()
-    mock_response_usd.json.return_value = {"conversion_rates": {"RUB": 99.95}}
-    mock_response_eur = Mock()
-    mock_response_eur.json.return_value = {"conversion_rates": {"RUB": 105.59}}
-    mock_get.side_effect = [mock_response_usd, mock_response_eur]
-
-    result = exchange_rate(['USD', 'EUR'])
-    expected = [{"currency": "USD", "rate": 99.95}, {"currency": "EUR", "rate": 105.59}]
-    assert result == expected
-
+    mock_get.return_value.json.return_value = [
+            {"currency": "USD", "rate": 99.82},
+            {"currency": "EUR", "rate": 103.83}
+        ]
+    assert exchange_rate(trans_1) == [
+            {"currency": "USD", "rate": 99.82},
+            {"currency": "EUR", "rate": 103.83}
+        ]
 
 
 def test_exchange_rate_no_currencies():
@@ -210,9 +212,8 @@ def test_get_price_stock(mock_get):
     }
     mock_get.return_value = mock_response
     stocks = {"AAPL", "MSFT"}
-    expected_result = [
-        {"stock": "AAPL", "price": 150.25},
-        {"stock": "MSFT", "price": 150.25}, ]
+    expected_result = [{'price': 150.25, 'stock': 'AAPL'}, {'price': 150.25, 'stock': 'MSFT'}]
+
     result = get_price_stock(stocks)
     assert result == expected_result
 

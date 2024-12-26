@@ -50,6 +50,3 @@ def cashback_categories(data, year, month) -> str:
     sorted_cashback = dict(sorted(cashback_distribution.items(), key=lambda item: item[1], reverse=True))
     cashback_categories_logger.info('Конец работы функции')
     return json.dumps(sorted_cashback, ensure_ascii=False)
-
-result = cashback_categories(data, 2021, 12)
-print(result)
