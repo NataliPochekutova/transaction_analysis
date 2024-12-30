@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 import logging
-from src.views import reading_excel_file
+from src.utils import reading_excel_file
 
 
 logging.basicConfig(

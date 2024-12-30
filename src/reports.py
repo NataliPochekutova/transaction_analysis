@@ -6,7 +6,7 @@ from typing import Any
 import logging
 
 from src.decorators import decorator_spending_by_category
-from src.views import reading_excel_file
+from src.utils import reading_excel_file
 
 
 logging.basicConfig(

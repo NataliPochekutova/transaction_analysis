@@ -4,8 +4,8 @@ from unittest.mock import patch, Mock, mock_open
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-from src.views import greeting_by_time_of_day, filter_by_date, reading_excel_file, card_expenses
-from src.views import transaction_rating_by_amount, exchange_rate, get_price_stock, get_user_settings
+from src.utils import greeting_by_time_of_day, filter_by_date, reading_excel_file, card_expenses
+from src.utils import transaction_rating_by_amount, exchange_rate, get_price_stock, get_user_settings
 
 
 load_dotenv()
@@ -27,41 +27,23 @@ def test_greeting_by_time_of_day(date_now, expected_greeting):
     assert greeting_by_time_of_day(date_now) == expected_greeting
 
 
-def test_filter_valid_date(sample_data):
-    """Тестирование функции фильтрации данных по заданной дате"""
-    result = filter_by_date("2021-11-03", sample_data)
-    expected = [
+@pytest.mark.parametrize("input_date, expected", [
+    ("2021-11-03", [
         {'Дата платежа': '01.11.2021', 'Статус': 'OK', 'Сумма платежа': -228.0, 'Валюта платежа': 'RUB',
          'Категория': 'Супермаркеты', 'Описание': 'Колхоз', 'MCC': 5411, 'Номер карты': '*4556'},
         {'Дата платежа': '02.11.2021', 'Статус': 'OK', 'Сумма платежа': -110.0, 'Валюта платежа': 'RUB',
          'Категория': 'Фастфуд', 'Описание': 'Mouse Tail', 'MCC': 5411, 'Номер карты': '*4556'},
         {'Дата платежа': '03.11.2021', 'Статус': 'OK', 'Сумма платежа': -525.0, 'Валюта платежа': 'RUB',
-         'Категория': 'Одежда и обувь', 'Описание': 'WILDBERRIES', 'MCC': 5399, 'Номер карты': '*7197'}
-    ]
-    assert result == expected
-
-
-def test_filter_empty_date(sample_data):
-    """фильтрация данных по дате, где вместо даты пустая строка"""
-    result = filter_by_date("", sample_data)
-    expected = []
-    assert result == expected
-
-
-def test_filter_no_matching_dates(sample_data):
-    """фильтрация данных по дате, где дата не входит в диапазон"""
-    result = filter_by_date("2021-12-03", sample_data)
-    expected = []
-    assert result == expected
-
-
-def test_filter_with_nan(sample_data):
-    """Тестирование функции фильтрации данных по заданной дате"""
-    result = filter_by_date("2021-11-01", sample_data)
-    expected = [
+         'Категория': 'Одежда и обувь', 'Описание': 'WILDBERRIES', 'MCC': 5399, 'Номер карты': '*7197'}]),
+    ("", []),  # тест на пустую строку
+    ("2021-12-03", []),  # тест на дату вне диапазона
+    ("2021-11-01", [
         {'Дата платежа': '01.11.2021', 'Статус': 'OK', 'Сумма платежа': -228.0, 'Валюта платежа': 'RUB',
-         'Категория': 'Супермаркеты', 'Описание': 'Колхоз', 'MCC': 5411, 'Номер карты': '*4556'}
-    ]
+         'Категория': 'Супермаркеты', 'Описание': 'Колхоз', 'MCC': 5411, 'Номер карты': '*4556'}])
+])
+def test_filter_by_date(input_date, expected, sample_data):
+    """Тестирование функции фильтрации данных по заданной дате"""
+    result = filter_by_date(input_date, sample_data)
     assert result == expected
 
 
@@ -114,32 +96,24 @@ def test_reading_excel_file_file_not_found(mock_read_excel):
     assert result == []
 
 
-def test_card_expenses(sample_data):
+@pytest.mark.parametrize("input_data, expected", [
+    (
+        [{'Номер карты': '*4556', 'Сумма платежа': -228.0},
+         {'Номер карты': '*4556', 'Сумма платежа': -110.0},
+         {'Номер карты': '*7197', 'Сумма платежа': -525.0}],
+
+        [{"last_digits": "4556", "total_spent": 338.0, "cashback": 3.38},
+         {"last_digits": "7197", "total_spent": 525.0, "cashback": 5.25}]),
+
+    ([], []),  # Проверка на пустой список
+
+    ([
+      {"Номер карты": "nan", "Сумма платежа": "nan"},
+      {"Номер карты": float("nan"), "Сумма платежа": float("nan")},], [])
+])
+def test_card_expenses(input_data, expected):
     """Тестирование функции, возвращающей данные по карте"""
-    result = card_expenses(sample_data)
-
-    expected = [
-        {"last_digits": "4556", "total_spent": 338.0, "cashback": 3.38},
-        {"last_digits": "7197", "total_spent": 525.0, "cashback": 5.25}
-    ]
-    assert result == expected
-
-
-def test_card_expenses_empty_list():
-    """Тестирование, если передан пустой список"""
-    result = card_expenses([])
-    expected = []
-    assert result == expected
-
-
-def test_card_expenses_no_valid_data():
-    """Тестирование, если нет номера карты или суммы платежа"""
-    invalid_data = [
-        {"Номер карты": "nan", "Сумма платежа": "nan"},
-        {"Номер карты": float("nan"), "Сумма платежа": float("nan")},
-    ]
-    result = card_expenses(invalid_data)
-    expected = []
+    result = card_expenses(input_data)
     assert result == expected
 
 
@@ -161,21 +135,16 @@ def test_transaction_rating_by_amount(mock_data):
     assert result == expected
 
 
-def test_transaction_rating_by_amount_empty_list():
-    """Тест на случай, если передан пустой список транзакций."""
-    result = transaction_rating_by_amount([])
-    expected = []
-    assert result == expected
-
-
-def test_transaction_rating_by_amount_no_expenses(mock_data):
-    """Тестирует случай, когда все транзакции являются пополнениями."""
-    only_recharges = [
+@pytest.mark.parametrize("input_data, expected", [
+    ([], []),  # Тест на случай, если передан пустой список транзакций
+    ([  # Тестирует случай, когда все транзакции являются пополнениями
         {"Дата платежа": "01.01.2023", "Сумма платежа": 150, "Категория": "Пополнения", "Описание": "Пополнение"},
         {"Дата платежа": "02.01.2023", "Сумма платежа": 200, "Категория": "Пополнения", "Описание": "Пополнение"},
-    ]
-    result = transaction_rating_by_amount(only_recharges)
-    expected = []
+    ], [])
+])
+def test_transaction_rating_by_amount(input_data, expected):
+    """Тестирование функции, возвращающей рейтинг транзакций по сумме"""
+    result = transaction_rating_by_amount(input_data)
     assert result == expected
 
 
@@ -237,26 +206,17 @@ def test_get_price_stock_invalid_response(mock_get):
         get_price_stock(stocks)
 
 
-@patch("builtins.open", new_callable=mock_open, read_data='[{"currency": "USD"}, {"stock": "AAPL"}]')
-def test_get_user_settings_success(mock_file):
-    """Тестирование функции, возвращающей список словарей с данными об валютах и акциях"""
-    result = get_user_settings("dummy_path.json")
-    expected = [{"currency": "USD"}, {"stock": "AAPL"}]
-    assert result == expected
-    mock_file.assert_called_once_with("dummy_path.json", encoding="utf-8")
-
-
-@patch("builtins.open", side_effect=FileNotFoundError)
-def test_get_user_settings_file_not_found(mock_file):
-    result = get_user_settings("dummy_path.json")
-    expected = []
-    assert result == expected
-    mock_file.assert_called_once_with("dummy_path.json", encoding="utf-8")
-
-
-@patch("builtins.open", new_callable=mock_open, read_data='{"currency": "USD", "stock": AAPL}')  # Некорректный JSON
-def test_get_user_settings_invalid_json(mock_file):
-    result = get_user_settings("dummy_path.json")
-    expected = []
-    assert result == expected
-    mock_file.assert_called_once_with("dummy_path.json", encoding="utf-8")
+@pytest.mark.parametrize("mock_data, expected", [
+    ('[{"currency": "USD"}, {"stock": "AAPL"}]', [{"currency": "USD"}, {"stock": "AAPL"}]),  # Успешное чтение
+    (None, []),  # Ошибка файла
+    ('{"currency": "USD", "stock": AAPL}', [])  # Некорректный JSON
+])
+def test_get_user_settings(mock_data, expected):
+    if mock_data is None:  # Обработка случая FileNotFoundError
+        with patch("builtins.open", side_effect=FileNotFoundError):
+            result = get_user_settings("dummy_path.json")
+            assert result == expected
+    else:
+        with patch("builtins.open", new_callable=mock_open, read_data=mock_data):
+            result = get_user_settings("dummy_path.json")
+            assert result == expected
